@@ -12,6 +12,7 @@ const NAV = [
   ]},
   { section: 'STUDIO', color: 'studio', items: [
     { href: '/studio', icon: '🎯', label: 'Niche Studio', engine: 'studio' },
+    { href: '/campaign', icon: '🚀', label: 'Campaigns', engine: 'studio' },
   ]},
   { section: 'FORGE', color: 'forge', items: [
     { href: '/forge/nichefinder', icon: '🔍', label: 'Niche Finder', engine: 'forge' },
