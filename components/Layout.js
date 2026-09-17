@@ -24,6 +24,7 @@ const NAV = [
     { href: '/forge/monitor',    icon: '⚙', label: 'Monitor',     engine: 'forge' },
     { href: '/forge/offpage',    icon: '🔗', label: 'Offpage',    engine: 'forge' },
     { href: '/forge/ecommerce',  icon: '🏪', label: 'Ecommerce',  engine: 'forge' },
+    { href: '/forge/clusters',   icon: '📦', label: 'Clusters',   engine: 'forge' },
   ]},
   { section: 'REACH', color: 'reach', items: [
     { href: '/reach/campaigns',  icon: '⇶', label: 'Campaigns',   engine: 'reach' },
