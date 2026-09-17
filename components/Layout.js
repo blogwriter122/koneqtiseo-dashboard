@@ -49,8 +49,8 @@ export default function Layout({ children }) {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="logo">RANK<span className="r">ORA</span></div>
-        <div className="logo-sub">Unified SEO Platform</div>
+        <div className="logo">Koneqti<span className="r">SEO</span></div>
+        <div className="logo-sub">Agentic SEO Platform</div>
 
         {NAV.map((group, gi) => (
           <div className="nav-group" key={gi}>
