@@ -10,6 +10,9 @@ const NAV = [
     { href: '/bots', icon: '◉', label: 'Bot Status', engine: 'overview' },
     { href: '/config', icon: '⚙', label: 'System Config', engine: 'overview' },
   ]},
+  { section: 'STUDIO', color: 'studio', items: [
+    { href: '/studio', icon: '🎯', label: 'Niche Studio', engine: 'studio' },
+  ]},
   { section: 'FORGE', color: 'forge', items: [
     { href: '/forge/nichefinder', icon: '🔍', label: 'Niche Finder', engine: 'forge' },
     { href: '/forge/quickwrite', icon: '✎', label: 'Quick Write', engine: 'forge' },
@@ -46,8 +49,8 @@ export default function Layout({ children }) {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="logo">Koneqti<span className="r">SEO</span></div>
-        <div className="logo-sub">Agentic SEO Platform</div>
+        <div className="logo">RANK<span className="r">ORA</span></div>
+        <div className="logo-sub">Unified SEO Platform</div>
 
         {NAV.map((group, gi) => (
           <div className="nav-group" key={gi}>
