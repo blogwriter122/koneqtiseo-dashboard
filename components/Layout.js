@@ -15,6 +15,9 @@ const NAV = [
     { href: '/studio', icon: '🎯', label: 'Niche Studio', engine: 'studio' },
     { href: '/local', icon: '📍', label: 'Local Studio', engine: 'studio' },
     { href: '/campaign', icon: '🚀', label: 'Campaigns', engine: 'studio' },
+    { href: '/audit', icon: '🕷️', label: 'Site Audit', engine: 'studio' },
+    { href: '/reports', icon: '📄', label: 'Reports', engine: 'studio' },
+    { href: '/agencies', icon: '🏢', label: 'Agencies', engine: 'studio' },
   ]},
   { section: 'FORGE', color: 'forge', items: [
     { href: '/forge/nichefinder', icon: '🔍', label: 'Niche Finder', engine: 'forge' },
