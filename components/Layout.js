@@ -57,7 +57,7 @@ export default function Layout({ children }) {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="logo">Koneqti<span className="r">SEO</span></div>
+        <Link href="/"><div className="logo">Koneqti<span className="r">SEO</span></div></Link>
         <div className="logo-sub">Agentic SEO Platform</div>
 
         {NAV.map((group, gi) => (
