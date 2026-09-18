@@ -23,6 +23,8 @@ const NAV = [
     { href: '/forge/sites',      icon: '⬡', label: 'Sites',       engine: 'forge' },
     { href: '/forge/content',    icon: '▤', label: 'Content',     engine: 'forge' },
     { href: '/forge/monitor',    icon: '⚙', label: 'Monitor',     engine: 'forge' },
+    { href: '/forge/gsc',       icon: '📊', label: 'GSC Intel',   engine: 'forge' },
+    { href: '/forge/ai_visibility', icon: '🤖', label: 'AI Visibility', engine: 'forge' },
     { href: '/forge/offpage',    icon: '🔗', label: 'Offpage',    engine: 'forge' },
     { href: '/offpage',          icon: '📡', label: 'Off-Page Hub', engine: 'forge' },
     { href: '/forge/ecommerce',  icon: '🏪', label: 'Ecommerce',  engine: 'forge' },
