@@ -11,6 +11,11 @@ import Head from 'next/head';
 export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState('login'); // login | signup | reset
+
+  useEffect(() => {
+    // Read mode from URL query (?mode=signup)
+    if (router.query.mode) setMode(router.query.mode);
+  }, [router.query.mode]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
