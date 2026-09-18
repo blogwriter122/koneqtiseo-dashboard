@@ -46,6 +46,7 @@ const NAV = [
     { href: '/locale/scorer',    icon: '◎', label: 'Niche Scorer', engine: 'locale' },
     { href: '/locale/research',  icon: '⊕', label: 'Research',    engine: 'locale' },
     { href: '/locale/sites',     icon: '📍', label: 'Local Sites', engine: 'locale' },
+    { href: '/locale/geogrid',   icon: '🗺️', label: 'Geo-Grid',   engine: 'locale' },
     { href: '/locale/citations', icon: '◻', label: 'Citations',   engine: 'locale' },
     { href: '/locale/rankings',  icon: '📈', label: 'Rankings',   engine: 'locale' },
     { href: '/locale/agency',    icon: '◈', label: 'Agency',      engine: 'locale' },
