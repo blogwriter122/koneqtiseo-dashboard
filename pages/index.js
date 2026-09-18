@@ -276,7 +276,7 @@ export default function HomePage() {
         <div id="compare" className="section">
           <div className="section-tag">VS COMPETITORS</div>
           <h2>They Report. We Build.</h2>
-          <p className="section-sub">Every other SEO tool tells you what to do. KoneqtiSEO does it for you.</p>
+          <p className="section-sub">Ahrefs and Semrush show you the problem. KoneqtiSEO fixes it — automatically. RankIQ helps you write. We write, publish, rank and monitor.</p>
           <table className="compare-table">
             <thead>
               <tr>
@@ -284,24 +284,24 @@ export default function HomePage() {
                 <th className="us">KoneqtiSEO</th>
                 <th style={{ color: '#666' }}>Ahrefs</th>
                 <th style={{ color: '#666' }}>Semrush</th>
-                <th style={{ color: '#666' }}>SEOChex</th>
+                <th style={{ color: '#666' }}>RankIQ</th>
               </tr>
             </thead>
             <tbody>
               {[
-                ['Writes content automatically', '✅ Full AI pipeline', '❌', '❌', '❌'],
+                ['Writes content automatically', '✅ Full AI pipeline', '❌', '❌', '⚠️ AI briefs only'],
                 ['Publishes to WordPress', '✅ Fully automated', '❌', '❌', '❌'],
                 ['Publishes to 16 platforms', '✅ Two-round system', '❌', '❌', '❌'],
                 ['Uses free browser (no API cost)', '✅ Chrome CDP', '❌', '❌', '❌'],
-                ['Finds niches autonomously', '✅ 3 discovery paths', '⚠️ Manual', '⚠️ Manual', '❌'],
+                ['Finds niches autonomously', '✅ 3 discovery paths', '⚠️ Manual', '⚠️ Manual', '⚠️ Manual'],
                 ['Local rank & rent system', '✅ 30k cities', '❌', '❌', '❌'],
                 ['Affiliate cluster automation', '✅ 1M keywords', '❌', '❌', '❌'],
                 ['AI answer monitoring', '✅ 5 metrics', '❌', '❌', '❌'],
                 ['Site crawler + auto-fix', '✅ 50+ issue types', '✅', '✅', '❌'],
                 ['White-label agency reports', '✅ HTML/PDF', '❌', '✅', '❌'],
                 ['GHL integration', '✅ Native', '❌', '❌', '❌'],
-                ['Indexing (IndexNow + GSC + social)', '✅ 4 channels', '❌', '❌', '✅ Basic'],
-                ['Monthly cost for 10 sites', '✅ $149', '❌ $399+', '❌ $449+', '⚠️ Credits'],
+                ['Keyword research', '✅ Browser-based', '✅ Full', '✅ Full', '✅ Niche focus'],
+                ['Monthly cost for 10 sites', '✅ $149', '❌ $399+', '❌ $449+', '❌ $99+ limited'],
               ].map(([feature, ...vals]) => (
                 <tr key={feature}>
                   <td className="feature-name">{feature}</td>
