@@ -5,7 +5,7 @@ import { api } from '../lib/api';
 
 const NAV = [
   { section: null, items: [
-    { href: '/', icon: '◆', label: 'Overview', engine: 'overview' },
+    { href: '/dashboard', icon: '◆', label: 'Overview', engine: 'overview' },
     { href: '/jobs', icon: '⊟', label: 'Job Queue', engine: 'overview' },
     { href: '/bots', icon: '◉', label: 'Bot Status', engine: 'overview' },
     { href: '/config', icon: '⚙', label: 'System Config', engine: 'overview' },
