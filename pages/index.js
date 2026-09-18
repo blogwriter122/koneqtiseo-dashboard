@@ -57,7 +57,8 @@ export default function HomePage() {
         a { text-decoration: none; }
         .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
         .nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid #1e1e2e; }
-        .logo { font-size: 22px; font-weight: 900; color: white; }
+        .logo { font-size: 22px; font-weight: 900; color: white; cursor: pointer; }
+        .logo:hover { opacity: 0.8; }
         .logo span { color: #6c47ff; }
         .nav-links { display: flex; gap: 28px; align-items: center; }
         .nav-link { color: #888; font-size: 14px; }
@@ -142,7 +143,7 @@ export default function HomePage() {
       {/* NAV */}
       <div className="container">
         <nav className="nav">
-          <div className="logo">Koneqti<span>SEO</span></div>
+          <a href="/" style={{ textDecoration: 'none' }}><div className="logo">Koneqti<span>SEO</span></div></a>
           <div className="nav-links">
             <a href="#how-it-works" className="nav-link">How It Works</a>
             <a href="#features" className="nav-link">Features</a>
@@ -379,7 +380,7 @@ export default function HomePage() {
       {/* FOOTER */}
       <div className="container">
         <footer>
-          <div className="footer-logo">Koneqti<span>SEO</span></div>
+          <a href="/" style={{ textDecoration: 'none' }}><div className="footer-logo">Koneqti<span>SEO</span></div></a>
           <div className="footer-links">
             <a href="#features" className="footer-link">Features</a>
             <a href="#pricing" className="footer-link">Pricing</a>
