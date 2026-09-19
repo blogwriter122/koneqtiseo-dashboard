@@ -21,15 +21,26 @@ export default function App({ Component, pageProps }) {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
+    // Timeout after 5 seconds — don't hang forever
+    const timeout = setTimeout(() => {
+      setAuthChecked(true);
+    }, 5000);
+
     // Check auth on mount
     supabase.auth.getSession().then(({ data }) => {
+      clearTimeout(timeout);
       const session = data?.session;
       setUser(session?.user || null);
       setAuthChecked(true);
 
       const isPublic = PUBLIC_PAGES.includes(router.pathname);
-
       if (!session && !isPublic) {
+        router.push('/login');
+      }
+    }).catch(() => {
+      clearTimeout(timeout);
+      setAuthChecked(true);
+      if (!PUBLIC_PAGES.includes(router.pathname)) {
         router.push('/login');
       }
     });
