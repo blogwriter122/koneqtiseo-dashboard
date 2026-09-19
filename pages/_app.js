@@ -8,7 +8,7 @@ import { useRouter } from 'next/router';
 import '../styles/globals.css';
 import { supabase } from '../lib/api';
 
-const PUBLIC_PAGES = ['/', '/login', '/pricing', '/signup'];
+const PUBLIC_PAGES = ['/', '/login', '/pricing', '/signup', '/settings'];
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
