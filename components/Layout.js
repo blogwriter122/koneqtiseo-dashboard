@@ -10,6 +10,7 @@ const NAV = [
     { href: '/bots', icon: '◉', label: 'Bot Status', engine: 'overview' },
     { href: '/config', icon: '⚙', label: 'System Config', engine: 'overview' },
     { href: '/settings', icon: '🔑', label: 'Settings & Launcher', engine: 'overview' },
+    { href: '/admin', icon: '⚙️', label: 'Admin', engine: 'overview' },
   ]},
   { section: 'STUDIO', color: 'studio', items: [
     { href: '/studio', icon: '🎯', label: 'Niche Studio', engine: 'studio' },
