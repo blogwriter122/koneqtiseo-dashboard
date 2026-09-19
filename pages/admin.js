@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/api';
 
-const ADMIN_EMAILS = ['your@email.com']; // Replace with your email
+const ADMIN_EMAILS = ['awanksa@gmail.com']; // Replace with your email
 
 export default function AdminPage() {
   const [users, setUsers] = useState([]);
