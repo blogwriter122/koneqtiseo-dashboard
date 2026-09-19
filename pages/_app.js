@@ -1,10 +1,6 @@
 /**
  * pages/_app.js — App wrapper
- *
- * Handles:
- *   1. Auth protection — redirect to /login if not logged in
- *   2. NO Layout wrapper here — each page has its own Layout
- *      (pages that don't need layout: index, login)
+ * Fixed: faster timeout + better session handling
  */
 
 import { useEffect, useState } from 'react';
@@ -12,8 +8,7 @@ import { useRouter } from 'next/router';
 import '../styles/globals.css';
 import { supabase } from '../lib/api';
 
-// Pages that don't require auth
-const PUBLIC_PAGES = ['/', '/login'];
+const PUBLIC_PAGES = ['/', '/login', '/pricing', '/signup'];
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
@@ -21,69 +16,56 @@ export default function App({ Component, pageProps }) {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Timeout after 5 seconds — don't hang forever
+    // Fast timeout — 3 seconds max
     const timeout = setTimeout(() => {
       setAuthChecked(true);
-    }, 5000);
+      if (!PUBLIC_PAGES.includes(router.pathname)) {
+        router.push('/login');
+      }
+    }, 3000);
 
-    // Check auth on mount
     supabase.auth.getSession().then(({ data }) => {
       clearTimeout(timeout);
       const session = data?.session;
       setUser(session?.user || null);
       setAuthChecked(true);
-
       const isPublic = PUBLIC_PAGES.includes(router.pathname);
-      if (!session && !isPublic) {
-        router.push('/login');
-      }
+      if (!session && !isPublic) router.push('/login');
     }).catch(() => {
       clearTimeout(timeout);
       setAuthChecked(true);
-      if (!PUBLIC_PAGES.includes(router.pathname)) {
-        router.push('/login');
-      }
+      if (!PUBLIC_PAGES.includes(router.pathname)) router.push('/login');
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
-      if (event === 'SIGNED_OUT') {
-        router.push('/login');
-      }
-      if (event === 'SIGNED_IN') {
-        if (PUBLIC_PAGES.includes(router.pathname)) {
-          router.push('/dashboard');
-        }
-      }
+      if (event === 'SIGNED_OUT') router.push('/login');
+      if (event === 'SIGNED_IN' && PUBLIC_PAGES.includes(router.pathname)) router.push('/dashboard');
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Don't render until auth is checked (prevents flash)
   if (!authChecked) {
     return (
       <div style={{
         display: 'flex', height: '100vh', alignItems: 'center',
         justifyContent: 'center', background: '#09090f', color: '#666',
-        fontFamily: 'system-ui', fontSize: '14px',
+        fontFamily: 'system-ui', fontSize: '14px', flexDirection: 'column', gap: '12px',
       }}>
-        Loading...
+        <div>Loading KoneqtiSEO...</div>
+        <div style={{ fontSize: '12px', color: '#444' }}>
+          If stuck, <a href="/login" style={{ color: '#6c47ff' }}>click here</a>
+        </div>
       </div>
     );
   }
 
-  // Public pages render without auth
   if (PUBLIC_PAGES.includes(router.pathname)) {
     return <Component {...pageProps} />;
   }
 
-  // Protected pages — user must be logged in
-  if (!user) {
-    return null; // router.push('/login') is already triggered
-  }
+  if (!user) return null;
 
-  // Render page — NO Layout wrapper here, each page handles its own Layout
   return <Component {...pageProps} />;
 }
