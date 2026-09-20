@@ -30,6 +30,7 @@ const NAV = [
     { href: '/forge/gsc',       icon: '📊', label: 'GSC Intel',   engine: 'forge' },
     { href: '/forge/ai_visibility', icon: '🤖', label: 'AI Visibility', engine: 'forge' },
     { href: '/offpage',          icon: '🔗', label: 'Off-Page Hub', engine: 'forge' },
+    { href: '/domains',          icon: '🌐', label: 'Domain Library', engine: 'forge' },
     { href: '/forge/ecommerce',  icon: '🏪', label: 'Ecommerce',  engine: 'forge' },
     { href: '/forge/clusters',   icon: '📦', label: 'Clusters',   engine: 'forge' },
   ]},
