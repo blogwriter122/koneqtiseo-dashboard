@@ -29,9 +29,22 @@ const PHASES = [
 ];
 
 const CAMPAIGN_MODES = [
-  { value: 'new_site', label: '🆕 New Site', desc: 'Build from scratch' },
-  { value: 'existing_site', label: '🔄 Existing Site', desc: 'Audit + fix + grow' },
-  { value: 'real_business', label: '🏢 Real Business', desc: 'Local SEO + GBP' },
+  { value: 'new_site',      label: '🆕 New Site',      desc: 'Find niche → build → write all → grow (day by day)', needsNiche: true },
+  { value: 'grow_existing', label: '📈 Grow Existing',  desc: 'Audit → fix → improve → fill gaps → offpage → monitor' },
+  { value: 'audit_fix',     label: '🔧 Audit + Fix',    desc: 'Crawl → auto-fix → human report (one-time)' },
+  { value: 'offpage_only',  label: '🔗 Off-Page Only',  desc: 'Just backlinks — 2-round + directories + forums' },
+  { value: 'write_only',    label: '✍️ Write Articles',  desc: 'Full 8-step quality pipeline → publish auto' },
+  { value: 'parasite',      label: '🦠 Parasite Engine', desc: 'Auto keywords + trends → 16 platforms (continuous)' },
+];
+
+const NICHE_TYPES = [
+  { value: 'affiliate', label: 'Affiliate (Amazon/merchant)' },
+  { value: 'apk',       label: 'APK / App download' },
+  { value: 'menu',      label: 'Menu / Restaurant' },
+  { value: 'tool',      label: 'Tool + Info (AI-proof)' },
+  { value: 'info',      label: 'Info / Guide' },
+  { value: 'ecommerce', label: 'Ecommerce' },
+  { value: 'rank_rent', label: 'Local Rank & Rent' },
 ];
 
 export default function CampaignPage() {
@@ -39,6 +52,10 @@ export default function CampaignPage() {
   const [campaigns, setCampaigns] = useState([]);
   const [selectedSite, setSelectedSite] = useState('');
   const [mode, setMode] = useState('new_site');
+  const [nicheType, setNicheType] = useState('affiliate');
+  const [keywords, setKeywords] = useState('');       // write_only
+  const [targetUrls, setTargetUrls] = useState('');   // offpage_only
+  const [highQuality, setHighQuality] = useState(false);
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState([]);
   const [activeTab, setActiveTab] = useState('campaigns'); // campaigns | redirects | human-fix
@@ -66,14 +83,21 @@ export default function CampaignPage() {
 
   async function startCampaign() {
     if (!selectedSite) { alert('Select a site first'); return; }
+    if (mode === 'write_only' && !keywords.trim()) { alert('Enter keywords to write'); return; }
     setLoading(true);
     setLogs([`Starting ${mode} campaign...`]);
     try {
-      const result = await api.startCampaign({
-        siteId: selectedSite,
-        options: { mode, country: 'US', language: 'english' },
-      });
-      setLogs(prev => [...prev, `✅ Campaign started: ID ${result.campaignId}`]);
+      const options = { mode, country: 'US', language: 'english' };
+      if (mode === 'new_site') options.nicheType = nicheType;
+      if (mode === 'write_only') {
+        options.keywords = keywords.split('\n').map(k => k.trim()).filter(Boolean);
+        options.highQuality = highQuality;
+      }
+      if (mode === 'offpage_only') {
+        options.targetPages = targetUrls.split('\n').map(u => u.trim()).filter(Boolean);
+      }
+      const result = await api.startCampaign({ siteId: selectedSite, options });
+      setLogs(prev => [...prev, `✅ Campaign started: ID ${result.campaignId}`, `Flow: ${(result.flow || []).join(' → ')}`]);
       loadCampaigns();
     } catch (e) {
       setLogs(prev => [...prev, `❌ Error: ${e.message}`]);
@@ -151,6 +175,14 @@ export default function CampaignPage() {
                     {sites.map(s => <option key={s.id} value={s.id}>{s.url || s.name}</option>)}
                   </select>
                 </div>
+                {mode === 'new_site' && (
+                  <div style={{ flex: 2 }}>
+                    <label style={s.label}>Niche Type</label>
+                    <select style={s.select} value={nicheType} onChange={e => setNicheType(e.target.value)}>
+                      {NICHE_TYPES.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end' }}>
                   <button style={s.btn()} onClick={startCampaign} disabled={loading}>
                     {loading ? '⏳ Starting...' : '🚀 Start Campaign'}
@@ -158,16 +190,43 @@ export default function CampaignPage() {
                 </div>
               </div>
 
-              {/* Phase diagram */}
+              {/* write_only: keyword input */}
+              {mode === 'write_only' && (
+                <div style={{ marginTop: '16px' }}>
+                  <label style={s.label}>Keywords (one per line) — full 8-step pipeline, publishes auto</label>
+                  <textarea
+                    style={{ width: '100%', minHeight: '100px', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '13px', fontFamily: 'monospace' }}
+                    placeholder={"best coffee maker under 100\nhow to clean espresso machine\ncoffee grinder vs blender"}
+                    value={keywords}
+                    onChange={e => setKeywords(e.target.value)}
+                  />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={highQuality} onChange={e => setHighQuality(e.target.checked)} />
+                    High-quality mode (claim verification + section-by-section — for money pages)
+                  </label>
+                </div>
+              )}
+
+              {/* offpage_only: target URLs */}
+              {mode === 'offpage_only' && (
+                <div style={{ marginTop: '16px' }}>
+                  <label style={s.label}>Target Pages to build links to (one URL per line)</label>
+                  <textarea
+                    style={{ width: '100%', minHeight: '80px', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '13px', fontFamily: 'monospace' }}
+                    placeholder={"https://client-site.com/services/leak-repair\nhttps://client-site.com/emergency-plumber"}
+                    value={targetUrls}
+                    onChange={e => setTargetUrls(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {/* Dynamic flow for selected mode */}
               <div style={{ marginTop: '16px' }}>
-                <div style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '8px' }}>Campaign phases:</div>
-                <div style={s.phaseBar}>
-                  {PHASES.map(p => (
-                    <div key={p.num} style={s.phaseStep(false, false)}>
-                      <div>{p.icon}</div>
-                      <div>{p.label}</div>
-                    </div>
-                  ))}
+                <div style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '8px' }}>
+                  {CAMPAIGN_MODES.find(m => m.value === mode)?.label} flow:
+                </div>
+                <div style={{ fontSize: '13px', color: 'var(--text)', lineHeight: '1.6' }}>
+                  {CAMPAIGN_MODES.find(m => m.value === mode)?.desc}
                 </div>
               </div>
 
