@@ -1,82 +1,55 @@
 /**
- * pages/profiles.js — Profile Management
- * Create/edit/assign Chrome profiles for each platform account
- * Model A: profiles run on user's PC via launcher
+ * pages/profiles.js — Browser Profiles (koneqti.com model)
+ *
+ * A profile = ONE Chrome browser identity.
+ * You log MULTIPLE accounts inside ONE profile (LinkedIn + Reddit + Claude together).
+ * Profiles run in PARALLEL and serve ANY site.
+ * Use an existing Chrome folder OR let the launcher create one.
  */
 
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { api } from '../lib/api';
 
-const PLATFORMS = [
-  { id: 'claude', label: 'Claude.ai (writer)', round: null },
-  { id: 'wordpress', label: 'WordPress (publisher)', round: null },
-  { id: 'linkedin', label: 'LinkedIn', round: 1 },
-  { id: 'reddit', label: 'Reddit', round: 1 },
-  { id: 'medium', label: 'Medium', round: 1 },
-  { id: 'twitter', label: 'Twitter / X', round: 1 },
-  { id: 'pinterest', label: 'Pinterest', round: 1 },
-  { id: 'facebook', label: 'Facebook', round: 1 },
-  { id: 'quora', label: 'Quora', round: 1 },
-  { id: 'blogger', label: 'Blogger', round: 2 },
-  { id: 'tumblr', label: 'Tumblr', round: 2 },
-  { id: 'wordpress_com', label: 'WordPress.com', round: 2 },
-  { id: 'devto', label: 'Dev.to', round: 2 },
-  { id: 'notion', label: 'Notion', round: 2 },
-  { id: 'forum', label: 'Forum (niche)', round: null },
-  { id: 'gbp', label: 'Google Business Profile', round: null },
-];
+// Platforms you might log into inside a profile
+const PLATFORMS = ['claude', 'wordpress', 'linkedin', 'reddit', 'medium', 'twitter', 'pinterest', 'facebook', 'quora', 'blogger', 'tumblr', 'wordpress_com', 'devto', 'notion', 'forum', 'gbp'];
 
 export default function ProfilesPage() {
   const [profiles, setProfiles] = useState([]);
-  const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
-  const [filter, setFilter] = useState('all');
-  const [form, setForm] = useState({
-    name: '', platform: 'linkedin', browser_type: 'chrome', port: '',
-    scope: 'global', round: '', site_id: '', daily_limit: 5, username: '',
-  });
+  const [form, setForm] = useState({ name: '', browser_type: 'chrome', dir: '', port: '', ads_power_id: '', ix_profile_id: '' });
 
   useEffect(() => { load(); }, []);
 
   async function load() {
     setLoading(true);
     try {
-      const [p, s] = await Promise.all([
-        api.getProfiles().catch(() => ({ profiles: [] })),
-        api.sites().catch(() => []),
-      ]);
+      const p = await api.getProfiles().catch(() => ({ profiles: [] }));
       setProfiles(p.profiles || []);
-      setSites(Array.isArray(s) ? s : (s.sites || []));
     } catch (_) {} finally { setLoading(false); }
   }
 
   async function addProfile() {
-    if (!form.name || !form.platform) { alert('Name and platform required'); return; }
+    if (!form.name) { alert('Profile name required'); return; }
     try {
-      await api.addProfile({
-        ...form,
-        round: form.round ? parseInt(form.round) : null,
-        daily_limit: parseInt(form.daily_limit) || 5,
-        port: form.port ? parseInt(form.port) : undefined,
-      });
+      await api.addProfile({ ...form, port: form.port ? parseInt(form.port) : undefined });
       setShowAdd(false);
-      setForm({ name: '', platform: 'linkedin', browser_type: 'chrome', port: '', scope: 'global', round: '', site_id: '', daily_limit: 5, username: '' });
+      setForm({ name: '', browser_type: 'chrome', dir: '', port: '', ads_power_id: '', ix_profile_id: '' });
       load();
     } catch (e) { alert(e.message); }
   }
 
   async function deleteProfile(id) {
-    if (!confirm('Delete this profile?')) return;
+    if (!confirm('Delete this profile? (does not delete the Chrome folder on your PC)')) return;
     await api.deleteProfile(id);
     load();
   }
 
-  async function loginProfile(id) {
+  async function openProfile(id) {
     try {
-      const r = await api.loginProfile(id);
-      alert(r.message || 'Login request sent to your launcher');
+      const r = await api.openProfile(id);
+      alert(r.message || 'Open request sent to your launcher — check your launcher app');
     } catch (e) { alert(e.message); }
   }
 
@@ -85,112 +58,91 @@ export default function ProfilesPage() {
     load();
   }
 
-  // When platform changes, auto-set round
-  function onPlatformChange(platform) {
-    const p = PLATFORMS.find(x => x.id === platform);
-    setForm(f => ({ ...f, platform, round: p?.round ? String(p.round) : '' }));
-  }
-
   const s = {
     page: { padding: '24px' },
     panel: { background: 'var(--panel)', borderRadius: '12px', padding: '20px', marginBottom: '16px' },
-    tabs: { display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' },
-    tab: (a) => ({ padding: '7px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: a ? 'var(--forge)' : 'var(--panel)', color: a ? 'white' : 'var(--text)', fontWeight: a ? '700' : '500', fontSize: '13px' }),
     btn: (c = 'var(--forge)') => ({ background: c, color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' }),
-    smBtn: (c = 'var(--forge)') => ({ background: c, color: 'white', border: 'none', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '11px' }),
-    table: { width: '100%', borderCollapse: 'collapse', fontSize: '13px' },
-    th: { background: 'var(--bg)', padding: '8px 12px', textAlign: 'left', fontWeight: '700', borderBottom: '2px solid var(--border)', fontSize: '11px', color: 'var(--text-faint)', textTransform: 'uppercase' },
-    td: { padding: '10px 12px', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' },
+    smBtn: (c = 'var(--forge)') => ({ background: c, color: 'white', border: 'none', padding: '4px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '11px' }),
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' },
+    card: { background: 'var(--panel)', borderRadius: '12px', padding: '18px', border: '1px solid var(--border)' },
     input: { width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '13px' },
     label: { fontSize: '12px', color: 'var(--text-faint)', fontWeight: '600', marginBottom: '4px', display: 'block' },
     field: { marginBottom: '12px' },
-    badge: (st) => { const c = { active: '#00c853', warmup: '#ff9100', banned: '#f44336', idle: '#666' }; return { background: c[st] || '#444', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '700' }; },
-    roundBadge: (r) => ({ background: r === 1 ? '#2979ff' : r === 2 ? '#e040fb' : '#555', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '700' }),
+    badge: (st) => { const c = { idle: '#666', open: '#00c853', busy: '#2979ff' }; return { background: c[st] || '#444', color: 'white', padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700' }; },
+    chip: { display: 'inline-block', background: 'var(--bg)', color: 'var(--text-faint)', padding: '2px 10px', borderRadius: '12px', fontSize: '11px', marginRight: '4px', marginBottom: '4px', border: '1px solid var(--border)' },
     modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' },
-    modalCard: { background: 'var(--panel)', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '460px', maxHeight: '90vh', overflowY: 'auto' },
-    row2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' },
+    modalCard: { background: 'var(--panel)', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '440px', maxHeight: '90vh', overflowY: 'auto' },
   };
-
-  const filtered = filter === 'all' ? profiles
-    : filter === 'round1' ? profiles.filter(p => p.round === 1)
-    : filter === 'round2' ? profiles.filter(p => p.round === 2)
-    : profiles.filter(p => p.platform === filter);
 
   return (
     <Layout>
       <div style={s.page}>
         <div className="page-head">
           <div>
-            <div className="page-title">🔐 Profiles</div>
-            <div className="page-sub">Chrome profiles run on your PC via the launcher · assign accounts to sites & rounds</div>
+            <div className="page-title">🔐 Browser Profiles</div>
+            <div className="page-sub">Each profile is one Chrome identity · log multiple accounts inside · profiles run in parallel on your PC</div>
           </div>
         </div>
 
         <div style={{ ...s.panel, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px' }}>
           <div style={{ fontSize: '13px', color: 'var(--text-faint)' }}>
-            {profiles.length} profiles · {profiles.filter(p => p.login_status === 'logged_in').length} logged in · {profiles.filter(p => p.status === 'active').length} active
+            {profiles.length} profiles · {profiles.filter(p => p.enabled !== false).length} enabled
           </div>
           <button style={s.btn()} onClick={() => setShowAdd(true)}>+ Add Profile</button>
         </div>
 
-        <div style={s.tabs}>
-          {[['all', 'All'], ['round1', '🔵 Round 1 (Social)'], ['round2', '🟣 Round 2 (Web2)']].map(([id, label]) => (
-            <button key={id} style={s.tab(filter === id)} onClick={() => setFilter(id)}>{label}</button>
-          ))}
-        </div>
-
-        <div style={s.panel}>
-          {loading ? <div className="empty">Loading...</div> : filtered.length === 0 ? (
+        {loading ? (
+          <div style={s.panel}><div className="empty">Loading...</div></div>
+        ) : profiles.length === 0 ? (
+          <div style={s.panel}>
             <div className="empty">
               No profiles yet.<br />
-              <span style={{ fontSize: '13px', color: 'var(--text-faint)' }}>Add a profile, then use your launcher to log in the account.</span>
+              <span style={{ fontSize: '13px', color: 'var(--text-faint)' }}>Add a profile → open it in your launcher → log into your accounts inside it.</span>
             </div>
-          ) : (
-            <table style={s.table}>
-              <thead>
-                <tr>
-                  <th style={s.th}>Profile</th><th style={s.th}>Platform</th><th style={s.th}>Round</th>
-                  <th style={s.th}>Scope</th><th style={s.th}>Port</th><th style={s.th}>Status</th>
-                  <th style={s.th}>Login</th><th style={s.th}>Today</th><th style={s.th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(p => {
-                  const siteName = p.site_id ? (sites.find(s => s.id === p.site_id)?.url || 'site') : null;
-                  return (
-                    <tr key={p.id} style={{ opacity: p.enabled === false ? 0.5 : 1 }}>
-                      <td style={{ ...s.td, fontWeight: '600' }}>{p.browser_profile || p.name}</td>
-                      <td style={s.td}>{p.platform}</td>
-                      <td style={s.td}>{p.round ? <span style={s.roundBadge(p.round)}>R{p.round}</span> : <span style={{ color: 'var(--text-faint)' }}>—</span>}</td>
-                      <td style={s.td}>{p.scope === 'site' ? `📍 ${siteName}` : '🌐 Global'}</td>
-                      <td style={{ ...s.td, fontFamily: 'monospace' }}>{p.port || '—'}</td>
-                      <td style={s.td}><span style={s.badge(p.status)}>{p.status}</span></td>
-                      <td style={s.td}>{p.login_status === 'logged_in' ? '✅' : '⚠️'}</td>
-                      <td style={{ ...s.td, fontFamily: 'monospace' }}>{p.published_today || 0}/{p.daily_limit || 5}</td>
-                      <td style={s.td}>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                          <button style={s.smBtn('#00c853')} onClick={() => loginProfile(p.id)}>Login</button>
-                          <button style={s.smBtn('#666')} onClick={() => toggleEnabled(p)}>{p.enabled === false ? 'On' : 'Off'}</button>
-                          <button style={s.smBtn('#f44336')} onClick={() => deleteProfile(p.id)}>Del</button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div style={s.grid}>
+            {profiles.map(p => (
+              <div key={p.id} style={{ ...s.card, opacity: p.enabled === false ? 0.5 : 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '16px', fontWeight: '800' }}>{p.name}</div>
+                  <span style={s.badge(p.status)}>{p.status || 'idle'}</span>
+                </div>
+
+                <div style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '10px' }}>
+                  {p.browser_type === 'chrome' ? '🌐 Chrome' : p.browser_type === 'adspower' ? '🅰️ AdsPower' : '🦊 iX Browser'}
+                  {p.port && <span style={{ fontFamily: 'monospace', marginLeft: '8px' }}>:{p.port}</span>}
+                </div>
+
+                {/* Logged-in accounts */}
+                <div style={{ marginBottom: '12px', minHeight: '28px' }}>
+                  {(p.logged_accounts && p.logged_accounts.length > 0) ? (
+                    p.logged_accounts.map(a => <span key={a} style={s.chip}>✓ {a}</span>)
+                  ) : (
+                    <span style={{ fontSize: '12px', color: 'var(--text-faint)' }}>No accounts logged in yet</span>
+                  )}
+                </div>
+
+                {p.dir && <div style={{ fontSize: '10px', color: 'var(--text-faint)', fontFamily: 'monospace', marginBottom: '10px', wordBreak: 'break-all' }}>{p.dir}</div>}
+
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <button style={s.smBtn('#00c853')} onClick={() => openProfile(p.id)}>Open & Login</button>
+                  <button style={s.smBtn('#666')} onClick={() => toggleEnabled(p)}>{p.enabled === false ? 'Enable' : 'Disable'}</button>
+                  <button style={s.smBtn('#f44336')} onClick={() => deleteProfile(p.id)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* How it works */}
-        <div style={{ ...s.panel, background: 'rgba(108,71,255,0.05)', border: '1px solid rgba(108,71,255,0.2)' }}>
+        <div style={{ ...s.panel, background: 'rgba(108,71,255,0.05)', border: '1px solid rgba(108,71,255,0.2)', marginTop: '16px' }}>
           <div style={{ fontWeight: '700', marginBottom: '8px' }}>How Profiles Work</div>
           <div style={{ fontSize: '13px', color: 'var(--text-faint)', lineHeight: '1.7' }}>
-            1. Add a profile here (name, platform, round).<br />
-            2. Open your <strong>Launcher</strong> on your PC → click the profile → log in the account manually.<br />
-            3. The engine uses that logged-in profile to post — on <strong>your PC, your IP</strong>.<br />
-            <strong>Round 1</strong> = social platforms (posted first). <strong>Round 2</strong> = web2 (links back to Round 1).<br />
-            <strong>Global</strong> profiles serve all your sites. <strong>Site</strong> profiles are locked to one site.
+            A <strong>profile</strong> is one Chrome browser on your PC. You log <strong>multiple accounts inside one profile</strong> — e.g. LinkedIn + Reddit + Claude all in "profile-1".<br />
+            More profiles = more parallel work (write/post faster). Any profile can work on any site.<br />
+            <strong>To set up:</strong> Add a profile → click "Open & Login" → your launcher opens that Chrome → log into your accounts → close it. Sessions are saved.<br />
+            You can point to an <strong>existing Chrome folder</strong> or let the launcher create a fresh one.
           </div>
         </div>
       </div>
@@ -199,65 +151,42 @@ export default function ProfilesPage() {
       {showAdd && (
         <div style={s.modal} onClick={() => setShowAdd(false)}>
           <div style={s.modalCard} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: '18px', fontWeight: '800', marginBottom: '20px' }}>Add Profile</div>
+            <div style={{ fontSize: '18px', fontWeight: '800', marginBottom: '6px' }}>Add Profile</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '20px' }}>One Chrome identity — you'll log accounts into it after.</div>
 
             <div style={s.field}>
               <label style={s.label}>Profile Name</label>
-              <input style={s.input} placeholder="linkedin-1" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-            </div>
-
-            <div style={s.row2}>
-              <div style={s.field}>
-                <label style={s.label}>Platform</label>
-                <select style={s.input} value={form.platform} onChange={e => onPlatformChange(e.target.value)}>
-                  {PLATFORMS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-                </select>
-              </div>
-              <div style={s.field}>
-                <label style={s.label}>Browser</label>
-                <select style={s.input} value={form.browser_type} onChange={e => setForm(f => ({ ...f, browser_type: e.target.value }))}>
-                  <option value="chrome">Chrome</option>
-                  <option value="adspower">AdsPower</option>
-                  <option value="ixbrowser">iX Browser</option>
-                </select>
-              </div>
+              <input style={s.input} placeholder="profile-1" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
             </div>
 
             <div style={s.field}>
-              <label style={s.label}>Username / Email (optional)</label>
-              <input style={s.input} placeholder="account@email.com" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} />
-            </div>
-
-            <div style={s.row2}>
-              <div style={s.field}>
-                <label style={s.label}>Round</label>
-                <select style={s.input} value={form.round} onChange={e => setForm(f => ({ ...f, round: e.target.value }))}>
-                  <option value="">Any</option>
-                  <option value="1">Round 1 (Social)</option>
-                  <option value="2">Round 2 (Web2)</option>
-                </select>
-              </div>
-              <div style={s.field}>
-                <label style={s.label}>Daily Limit</label>
-                <input style={s.input} type="number" value={form.daily_limit} onChange={e => setForm(f => ({ ...f, daily_limit: e.target.value }))} />
-              </div>
-            </div>
-
-            <div style={s.field}>
-              <label style={s.label}>Scope</label>
-              <select style={s.input} value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value }))}>
-                <option value="global">🌐 Global (all sites)</option>
-                <option value="site">📍 Specific site</option>
+              <label style={s.label}>Browser Type</label>
+              <select style={s.input} value={form.browser_type} onChange={e => setForm(f => ({ ...f, browser_type: e.target.value }))}>
+                <option value="chrome">Chrome (create/use folder)</option>
+                <option value="adspower">AdsPower</option>
+                <option value="ixbrowser">iX Browser</option>
               </select>
             </div>
 
-            {form.scope === 'site' && (
+            {form.browser_type === 'chrome' && (
               <div style={s.field}>
-                <label style={s.label}>Site</label>
-                <select style={s.input} value={form.site_id} onChange={e => setForm(f => ({ ...f, site_id: e.target.value }))}>
-                  <option value="">Select site</option>
-                  {sites.map(s => <option key={s.id} value={s.id}>{s.url || s.name}</option>)}
-                </select>
+                <label style={s.label}>Existing Chrome folder (optional — leave empty to auto-create)</label>
+                <input style={s.input} placeholder="C:\Users\You\koneqti-profiles\profile-1" value={form.dir} onChange={e => setForm(f => ({ ...f, dir: e.target.value }))} />
+                <div style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '4px' }}>Empty = launcher creates a fresh profile folder automatically</div>
+              </div>
+            )}
+
+            {form.browser_type === 'adspower' && (
+              <div style={s.field}>
+                <label style={s.label}>AdsPower Profile ID</label>
+                <input style={s.input} placeholder="k1abc123" value={form.ads_power_id} onChange={e => setForm(f => ({ ...f, ads_power_id: e.target.value }))} />
+              </div>
+            )}
+
+            {form.browser_type === 'ixbrowser' && (
+              <div style={s.field}>
+                <label style={s.label}>iX Browser Profile ID</label>
+                <input style={s.input} placeholder="12345" value={form.ix_profile_id} onChange={e => setForm(f => ({ ...f, ix_profile_id: e.target.value }))} />
               </div>
             )}
 
@@ -267,7 +196,7 @@ export default function ProfilesPage() {
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
-              <button style={{ ...s.btn(), flex: 1 }} onClick={addProfile}>Create Profile</button>
+              <button style={{ ...s.btn(), flex: 1 }} onClick={addProfile}>Create</button>
               <button style={{ ...s.btn('#444'), flex: 1 }} onClick={() => setShowAdd(false)}>Cancel</button>
             </div>
           </div>
