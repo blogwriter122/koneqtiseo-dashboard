@@ -14,6 +14,7 @@ import { api } from '../lib/api';
 
 const DISCOVERY = [
   { id: 'keyword',    icon: '🔑', label: 'I have a keyword',      desc: 'Type keyword(s) directly', field: 'keyword' },
+  { id: 'vertical',   icon: '🏭', label: 'Mine a whole industry', desc: 'tech, finance, health → sub-niches', field: 'vertical' },
   { id: 'market',     icon: '🌐', label: 'Explore a market',       desc: 'Broad market → mine authority sites', field: 'market' },
   { id: 'competitor', icon: '🏆', label: 'Beat a competitor',      desc: 'Their site → steal their keywords', field: 'site' },
   { id: 'category',   icon: '🛒', label: 'Amazon category',        desc: 'Pick category → buyer keywords', field: 'category' },
@@ -57,6 +58,8 @@ export default function StudioPage() {
   const [market, setMarket] = useState('');
   const [site, setSite] = useState('');
   const [category, setCategory] = useState('');
+  const [vertical, setVertical] = useState('tech');
+  const [verticals, setVerticals] = useState(['tech', 'business', 'marketing', 'apk', 'tools', 'health', 'finance', 'gaming', 'crypto', 'saas', 'food', 'travel', 'fitness', 'home', 'photography']);
   // flow state
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState([]);
@@ -109,6 +112,16 @@ export default function StudioPage() {
         if (r.opportunities?.length) {
           setOpportunities(r.opportunities.sort((a, b) => b.rankability - a.rankability));
           addLog(`✅ ${r.winnable || 0} winnable opportunities`);
+          setStep(3); setLoading(false); return;
+        }
+        seedList = [];
+        if (r.note) addLog(`⚠️ ${r.note}`);
+      } else if (method === 'vertical') {
+        addLog(`Mining vertical "${vertical}"...`);
+        const r = await api.mineVertical({ vertical, country });
+        if (r.opportunities?.length) {
+          setOpportunities(r.opportunities.sort((a, b) => b.rankability - a.rankability));
+          addLog(`✅ ${r.winnable || 0} winnable sub-niches from ${r.authorities?.length || 0} authority sites`);
           setStep(3); setLoading(false); return;
         }
         seedList = [];
@@ -266,6 +279,14 @@ export default function StudioPage() {
             {method === 'market' && (
               <div><label style={s.label}>Broad market</label>
                 <input style={s.input} placeholder="photography, home fitness, coffee" value={market} onChange={e => setMarket(e.target.value)} />
+              </div>
+            )}
+            {method === 'vertical' && (
+              <div><label style={s.label}>Industry / Vertical</label>
+                <select style={s.input} value={vertical} onChange={e => setVertical(e.target.value)}>
+                  {verticals.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+                <div style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '4px' }}>Mines authority sites in the whole industry → finds winnable sub-niches</div>
               </div>
             )}
             {method === 'competitor' && (
