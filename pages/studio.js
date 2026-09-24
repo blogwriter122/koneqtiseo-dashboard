@@ -26,12 +26,28 @@ const NICHE_TYPES = [
   { value: 'rank_rent', label: '📍 Local Rank&Rent' },
 ];
 
+// Fallback countries (shown if API not reachable yet)
+const FALLBACK_COUNTRIES = [
+  { code: 'US', name: 'USA', score: 84 }, { code: 'DE', name: 'Germany', score: 90 },
+  { code: 'JP', name: 'Japan', score: 88 }, { code: 'UK', name: 'UK', score: 82 },
+  { code: 'FR', name: 'France', score: 81 }, { code: 'ES', name: 'Spain', score: 76 },
+  { code: 'CA', name: 'Canada', score: 78 }, { code: 'KR', name: 'South Korea', score: 84 },
+  { code: 'CZ', name: 'Czechia', score: 84 }, { code: 'AU', name: 'Australia', score: 74 },
+  { code: 'IT', name: 'Italy', score: 68 }, { code: 'NL', name: 'Netherlands', score: 68 },
+  { code: 'PL', name: 'Poland', score: 72 }, { code: 'BR', name: 'Brazil', score: 68 },
+  { code: 'TR', name: 'Turkey', score: 72 }, { code: 'RU', name: 'Russia', score: 72 },
+  { code: 'IN', name: 'India', score: 72 }, { code: 'PK', name: 'Pakistan', score: 74 },
+  { code: 'AE', name: 'UAE', score: 72 }, { code: 'SA', name: 'Saudi Arabia', score: 72 },
+];
+
 export default function StudioPage() {
   const [step, setStep] = useState(1);
   const [method, setMethod] = useState('keyword');
   const [nicheType, setNicheType] = useState('affiliate');
   const [country, setCountry] = useState('US');
-  const [countries, setCountries] = useState([]);
+  const [scanAllCountries, setScanAllCountries] = useState(false);  // find easiest country
+  const [countryScan, setCountryScan] = useState(null);
+  const [countries, setCountries] = useState(FALLBACK_COUNTRIES);
   const [language, setLanguage] = useState('english');
   // inputs per method
   const [keyword, setKeyword] = useState('');
@@ -47,15 +63,30 @@ export default function StudioPage() {
   const [blueprint, setBlueprint] = useState(null);
 
   useEffect(() => {
-    api.getCountryScores({ limit: 20 }).then(r => setCountries(r.countries || [])).catch(() => {});
+    api.getCountryScores({ limit: 20 }).then(r => {
+      if (r.countries?.length) setCountries(r.countries);
+    }).catch(() => {});
   }, []);
 
   const addLog = (m) => setLogs(p => [...p, m]);
 
   // STEP 2 → find seeds based on method
   async function findSeeds() {
-    setLoading(true); setLogs([]); setSeeds([]); setOpportunities([]);
+    setLoading(true); setLogs([]); setSeeds([]); setOpportunities([]); setCountryScan(null);
     try {
+      // Multi-country scan mode (keyword only) — find easiest country
+      if (scanAllCountries && method === 'keyword') {
+        const kw = keyword.split('\n').map(k => k.trim()).filter(Boolean)[0];
+        if (!kw) { addLog('Enter a keyword'); setLoading(false); return; }
+        addLog(`🌍 Scanning "${kw}" across countries to find the easiest...`);
+        const scan = await api.multiCountryScan({ keyword: kw });
+        setCountryScan(scan);
+        addLog(`✅ Easiest: ${scan.best?.country} (rankability ${scan.best?.rankability})`);
+        setStep(3);
+        setLoading(false);
+        return;
+      }
+
       let seedList = [];
       if (method === 'keyword') {
         seedList = keyword.split('\n').map(k => k.trim()).filter(Boolean);
@@ -173,11 +204,15 @@ export default function StudioPage() {
                 </select>
               </div>
               <div><label style={s.label}>Country</label>
-                <select style={s.select} value={country} onChange={e => setCountry(e.target.value)}>
+                <select style={s.select} value={country} onChange={e => setCountry(e.target.value)} disabled={scanAllCountries}>
                   {countries.map(c => <option key={c.code} value={c.code}>{c.name} ({c.score})</option>)}
                 </select>
               </div>
             </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '14px', fontSize: '13px', cursor: 'pointer', color: 'var(--text)' }}>
+              <input type="checkbox" checked={scanAllCountries} onChange={e => setScanAllCountries(e.target.checked)} />
+              🌍 Find the EASIEST country to rank (scan across markets) — best for a single keyword
+            </label>
             <button style={{ ...s.btn(), marginTop: '20px' }} onClick={() => setStep(2)}>Next →</button>
           </div>
         )}
@@ -217,6 +252,40 @@ export default function StudioPage() {
         {/* STEP 3: Opportunities ranked */}
         {step === 3 && (
           <div style={s.panel}>
+            {/* Multi-country scan result */}
+            {countryScan && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontWeight: '700', marginBottom: '4px' }}>🌍 Best country to rank for "{countryScan.keyword}"</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '12px' }}>
+                  Easiest: <strong style={{ color: '#00c853' }}>{countryScan.best?.country}</strong> — build there first
+                </div>
+                <table style={s.table}>
+                  <thead><tr><th style={s.th}>Country</th><th style={s.th}>Rankability</th><th style={s.th}>SERP Weak</th><th style={s.th}>Volume</th><th style={s.th}>Opportunity</th><th style={s.th}>Verdict</th></tr></thead>
+                  <tbody>
+                    {countryScan.countries?.map((c, i) => (
+                      <tr key={i} style={{ background: i === 0 ? 'rgba(0,200,83,0.06)' : 'transparent' }}>
+                        <td style={{ ...s.td, fontWeight: i === 0 ? '700' : '400' }}>{i === 0 && '🏆 '}{c.country}</td>
+                        <td style={{ ...s.td, fontWeight: '700', color: c.rankability >= 50 ? '#00c853' : 'var(--text)' }}>{c.rankability}</td>
+                        <td style={s.td}>{c.serpWeakness ?? '—'}</td>
+                        <td style={s.td}>{c.volume?.toLocaleString() ?? '—'}</td>
+                        <td style={{ ...s.td, fontWeight: '700' }}>{c.opportunityScore}</td>
+                        <td style={s.td}><span style={s.badge(c.verdict)}>{c.verdict}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <button style={{ ...s.btn(), marginTop: '12px' }} onClick={() => {
+                  setCountry(countryScan.best?.country);
+                  setScanAllCountries(false);
+                  setKeyword(countryScan.keyword);
+                  findSeeds();
+                }}>
+                  Analyze "{countryScan.keyword}" in {countryScan.best?.country} →
+                </button>
+              </div>
+            )}
+
+            {!countryScan && (<>
             <div style={{ fontWeight: '700', marginBottom: '4px' }}>Opportunities (ranked by rankability)</div>
             <div style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '16px' }}>
               {opportunities.filter(o => o.rankability >= 50).length} winnable of {opportunities.length} analyzed. Click one to build.
@@ -238,6 +307,7 @@ export default function StudioPage() {
                 </tbody>
               </table>
             )}
+            </>)}
             <button style={{ ...s.btn('#444'), marginTop: '16px' }} onClick={() => setStep(2)}>← Back</button>
           </div>
         )}
