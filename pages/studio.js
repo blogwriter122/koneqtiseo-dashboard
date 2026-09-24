@@ -126,11 +126,11 @@ export default function StudioPage() {
         seedList = [];
         if (r.note) addLog(`⚠️ ${r.note}`);
       } else if (method === 'vertical') {
-        addLog(`Mining vertical "${vertical}"...`);
-        const r = await api.mineVertical({ vertical, country });
+        addLog(`Mining ${vertical} as ${nicheType}${scanAllCountries ? ' (scanning countries)' : ` in ${country}`}...`);
+        const r = await api.mineVertical({ vertical, country, nicheType, scanCountries: scanAllCountries });
         if (r.opportunities?.length) {
           setOpportunities(r.opportunities.sort((a, b) => b.rankability - a.rankability));
-          addLog(`✅ ${r.winnable || 0} winnable sub-niches from ${r.authorities?.length || 0} authority sites`);
+          addLog(`✅ ${r.winnable || 0} winnable ${nicheType} sub-niches from ${r.authorities?.length || 0} authority sites`);
           setStep(3); setLoading(false); return;
         }
         seedList = [];
@@ -366,7 +366,7 @@ export default function StudioPage() {
                       <td style={s.td}>{o.keyword}</td>
                       <td style={{ ...s.td, fontWeight: '700', color: o.rankability >= 50 ? '#00c853' : 'var(--text)' }}>{o.rankability}</td>
                       <td style={s.td}>{o.serpWeakness ?? '—'}</td>
-                      <td style={s.td}>{o.beatablePages ?? '—'}</td>
+                      <td style={s.td}>{o.bestCountry ? `🏆 ${o.bestCountry}` : (o.beatablePages ?? '—')}</td>
                       <td style={s.td}><span style={s.badge(o.verdict)}>{o.verdict}</span></td>
                       <td style={s.td}><button style={{ ...s.btn(), padding: '5px 14px', fontSize: '12px' }} onClick={() => buildBlueprint(o)} disabled={loading}>Build →</button></td>
                     </tr>
