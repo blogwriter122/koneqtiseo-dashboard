@@ -12,6 +12,21 @@ export default function DomainsPage() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('library');
+  const [gapOur, setGapOur] = useState('');
+  const [gapCompetitors, setGapCompetitors] = useState('');
+  const [gapLoading, setGapLoading] = useState(false);
+  const [gapResult, setGapResult] = useState(null);
+
+  async function runLinkGap() {
+    if (!gapOur || !gapCompetitors.trim()) { alert('Enter your domain + competitors'); return; }
+    setGapLoading(true); setGapResult(null);
+    try {
+      const competitors = gapCompetitors.split('\n').map(c => c.trim()).filter(Boolean);
+      const r = await api.linkGap({ ourDomain: gapOur, competitors });
+      setGapResult(r);
+      load();  // refresh library (gap domains added)
+    } catch (e) { alert(e.message); } finally { setGapLoading(false); }
+  }
   const [discoverNiche, setDiscoverNiche] = useState('');
   const [discovering, setDiscovering] = useState(false);
   const [csvText, setCsvText] = useState('');
@@ -116,7 +131,7 @@ export default function DomainsPage() {
         )}
 
         <div style={s.tabs}>
-          {[['library', '📚 Library'], ['discover', '🔍 Auto-Discover'], ['import', '📥 Import CSV']].map(([id, label]) => (
+          {[['library', '📚 Library'], ['discover', '🔍 Auto-Discover'], ['import', '📥 Import CSV'], ['gap', '🎯 Competitor Gap']].map(([id, label]) => (
             <button key={id} style={s.tab(tab === id)} onClick={() => setTab(id)}>{label}</button>
           ))}
         </div>
@@ -187,6 +202,57 @@ export default function DomainsPage() {
             <button style={{ ...s.btn(), marginTop: '12px' }} onClick={importCsv} disabled={importing}>
               {importing ? '⏳ Importing...' : '📥 Import Domains'}
             </button>
+          </div>
+        )}
+
+        {/* COMPETITOR GAP */}
+        {tab === 'gap' && (
+          <div style={s.panel}>
+            <div style={{ fontWeight: '700', marginBottom: '8px' }}>🎯 Competitor Link Gap</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-faint)', marginBottom: '16px' }}>
+              Find domains linking to competitors but NOT you → gettable ones added as priority off-page targets. (Needs DataForSEO)
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '520px' }}>
+              <div>
+                <label style={{ fontSize: '12px', color: 'var(--text-faint)', display: 'block', marginBottom: '4px' }}>Your domain</label>
+                <input style={s.input} placeholder="mysite.com" value={gapOur} onChange={e => setGapOur(e.target.value)} />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', color: 'var(--text-faint)', display: 'block', marginBottom: '4px' }}>Competitors (one per line, top 3 rankers)</label>
+                <textarea style={{ ...s.textarea, minHeight: '80px' }} placeholder={"competitor1.com\ncompetitor2.com\ncompetitor3.com"} value={gapCompetitors} onChange={e => setGapCompetitors(e.target.value)} />
+              </div>
+              <button style={s.btn()} onClick={runLinkGap} disabled={gapLoading}>
+                {gapLoading ? '⏳ Analyzing...' : '🎯 Find Link Gap'}
+              </button>
+            </div>
+            {gapResult && (
+              <div style={{ marginTop: '20px' }}>
+                <div style={{ fontSize: '13px', marginBottom: '12px' }}>
+                  Found <strong>{gapResult.gaps?.length || 0}</strong> gap domains, <strong style={{ color: '#00c853' }}>{gapResult.gettableGaps?.length || 0}</strong> gettable (added to library).
+                </div>
+                {gapResult.anchorDistribution && (
+                  <div style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '12px' }}>
+                    Anchor mix to match: {Object.entries(gapResult.anchorDistribution).map(([k, v]) => `${k} ${v}%`).join(' · ')}
+                  </div>
+                )}
+                {gapResult.gettableGaps?.length > 0 && (
+                  <table style={s.table}>
+                    <thead><tr><th style={s.th}>Domain</th><th style={s.th}>Type</th><th style={s.th}>Linked by</th><th style={s.th}>DA</th><th style={s.th}>Priority</th></tr></thead>
+                    <tbody>
+                      {gapResult.gettableGaps.slice(0, 30).map((g, i) => (
+                        <tr key={i}>
+                          <td style={{ ...s.td, fontFamily: 'monospace', fontSize: '12px' }}>{g.domain}</td>
+                          <td style={s.td}><span style={s.typeBadge(g.gettable?.type)}>{g.gettable?.type}</span></td>
+                          <td style={s.td}>{g.count} comp</td>
+                          <td style={s.td}>{g.da || '—'}</td>
+                          <td style={{ ...s.td, fontWeight: '700' }}>{Math.round(g.priority)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
