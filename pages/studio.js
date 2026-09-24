@@ -59,7 +59,13 @@ export default function StudioPage() {
   const [site, setSite] = useState('');
   const [category, setCategory] = useState('');
   const [vertical, setVertical] = useState('tech');
-  const [verticals, setVerticals] = useState(['tech', 'business', 'marketing', 'apk', 'tools', 'health', 'finance', 'gaming', 'crypto', 'saas', 'food', 'travel', 'fitness', 'home', 'photography']);
+  const [verticals, setVerticals] = useState([
+    'tech', 'business', 'marketing', 'apk', 'tools', 'menu', 'streaming',
+    'health', 'finance', 'education', 'gaming', 'crypto', 'saas', 'ecommerce',
+    'realestate', 'legal', 'insurance', 'automotive', 'travel', 'food',
+    'fashion', 'beauty', 'fitness', 'parenting', 'pets', 'home', 'garden',
+    'diy', 'photography', 'music', 'sports', 'news', 'entertainment', 'templates'
+  ]);
   // flow state
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState([]);
@@ -74,6 +80,9 @@ export default function StudioPage() {
   useEffect(() => {
     api.getCountryScores({ limit: 20 }).then(r => {
       if (r.countries?.length) setCountries(r.countries);
+    }).catch(() => {});
+    api.getVerticals().then(r => {
+      if (r.verticals?.length) setVerticals(r.verticals);
     }).catch(() => {});
   }, []);
 
