@@ -23,6 +23,7 @@ const NICHE_TYPES = [
   { value: 'affiliate', label: '🛒 Affiliate' }, { value: 'apk', label: '📱 APK' },
   { value: 'menu', label: '🍔 Menu' }, { value: 'tool', label: '🔧 Tool+Info' },
   { value: 'info', label: '📚 Info' }, { value: 'ecommerce', label: '🏪 Ecommerce' },
+  { value: 'multi_page', label: '📄 Multi-Page (guest-post style)' },
   { value: 'rank_rent', label: '📍 Local Rank&Rent' },
 ];
 
@@ -44,6 +45,8 @@ export default function StudioPage() {
   const [step, setStep] = useState(1);
   const [method, setMethod] = useState('keyword');
   const [nicheType, setNicheType] = useState('affiliate');
+  const [strategy, setStrategy] = useState('micro');   // affiliate micro/macro
+  const [pageTarget, setPageTarget] = useState(40);    // multi_page count
   const [country, setCountry] = useState('US');
   const [scanAllCountries, setScanAllCountries] = useState(false);  // find easiest country
   const [countryScan, setCountryScan] = useState(null);
@@ -203,6 +206,19 @@ export default function StudioPage() {
                   {NICHE_TYPES.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
                 </select>
               </div>
+              {nicheType === 'affiliate' && (
+                <div><label style={s.label}>Strategy</label>
+                  <select style={s.select} value={strategy} onChange={e => setStrategy(e.target.value)}>
+                    <option value="micro">Micro (deep, pillar 30K+)</option>
+                    <option value="macro">Macro (broad, pillar 10K+)</option>
+                  </select>
+                </div>
+              )}
+              {(nicheType === 'multi_page') && (
+                <div><label style={s.label}>How many pages?</label>
+                  <input style={{ ...s.input, width: '100px' }} type="number" value={pageTarget} onChange={e => setPageTarget(parseInt(e.target.value) || 40)} />
+                </div>
+              )}
               <div><label style={s.label}>Country</label>
                 <select style={s.select} value={country} onChange={e => setCountry(e.target.value)} disabled={scanAllCountries}>
                   {countries.map(c => <option key={c.code} value={c.code}>{c.name} ({c.score})</option>)}
