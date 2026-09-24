@@ -64,6 +64,9 @@ export default function StudioPage() {
   const [opportunities, setOpportunities] = useState([]);
   const [selected, setSelected] = useState(null);
   const [blueprint, setBlueprint] = useState(null);
+  const [showBuild, setShowBuild] = useState(false);
+  const [wp, setWp] = useState({ domain: '', wpUrl: '', wpUser: '', wpPassword: '' });
+  const [building, setBuilding] = useState(false);
 
   useEffect(() => {
     api.getCountryScores({ limit: 20 }).then(r => {
@@ -149,6 +152,24 @@ export default function StudioPage() {
       setBlueprint(bp);
       setStep(4);
     } catch (e) { addLog(`Error: ${e.message}`); } finally { setLoading(false); }
+  }
+
+  // Actually build the site (create record + start campaign)
+  async function buildSite() {
+    setBuilding(true);
+    try {
+      const r = await api.studioBuild({
+        keyword: selected.keyword, nicheType, country, language, strategy, pageTarget,
+        domain: wp.domain, wpUrl: wp.wpUrl, wpUser: wp.wpUser, wpPassword: wp.wpPassword,
+        blueprint, rankability: selected.rankability,
+      });
+      alert(r.message);
+      setShowBuild(false);
+      if (r.campaign) {
+        // Reset to start — campaign is running
+        setStep(1); setOpportunities([]); setSelected(null); setBlueprint(null);
+      }
+    } catch (e) { alert(e.message); } finally { setBuilding(false); }
   }
 
   const s = {
@@ -343,9 +364,45 @@ export default function StudioPage() {
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button style={s.btn('#444')} onClick={() => setStep(3)}>← Back to opportunities</button>
-              <button style={s.btn('#00c853')} onClick={() => alert('Add a domain in Sites, then Start Campaign (new_site mode) to build this.')}>
+              <button style={s.btn('#00c853')} onClick={() => setShowBuild(true)}>
                 🚀 Build This Site
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Build modal — WordPress connect */}
+        {showBuild && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' }} onClick={() => setShowBuild(false)}>
+            <div style={{ background: 'var(--panel)', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '460px' }} onClick={e => e.stopPropagation()}>
+              <div style={{ fontSize: '18px', fontWeight: '800', marginBottom: '6px' }}>Build "{selected?.keyword}"</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '20px' }}>
+                Connect WordPress to build now, or create the site and add WP later.
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={s.label}>Domain (optional)</label>
+                <input style={s.input} placeholder="mysite.com" value={wp.domain} onChange={e => setWp(p => ({ ...p, domain: e.target.value }))} />
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={s.label}>WordPress URL</label>
+                <input style={s.input} placeholder="https://mysite.com" value={wp.wpUrl} onChange={e => setWp(p => ({ ...p, wpUrl: e.target.value }))} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                <div>
+                  <label style={s.label}>WP Username</label>
+                  <input style={s.input} value={wp.wpUser} onChange={e => setWp(p => ({ ...p, wpUser: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={s.label}>App Password</label>
+                  <input style={s.input} type="password" value={wp.wpPassword} onChange={e => setWp(p => ({ ...p, wpPassword: e.target.value }))} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                <button style={{ ...s.btn('#00c853'), flex: 1 }} onClick={buildSite} disabled={building}>
+                  {building ? '⏳ Building...' : (wp.wpUrl && wp.wpUser) ? '🚀 Build Now' : 'Create Site'}
+                </button>
+                <button style={{ ...s.btn('#444'), flex: 1 }} onClick={() => setShowBuild(false)}>Cancel</button>
+              </div>
             </div>
           </div>
         )}
