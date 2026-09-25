@@ -11,6 +11,7 @@ import { api } from '../lib/api';
 
 export default function TaxonomyPage() {
   const [markets, setMarkets] = useState([]);
+  const [loadError, setLoadError] = useState('');
   const [selMarket, setSelMarket] = useState(null);
   const [bank, setBank] = useState('affiliate');   // affiliate | ecommerce
   const [country, setCountry] = useState('US');
@@ -20,7 +21,12 @@ export default function TaxonomyPage() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    api.getTaxonomy().then(r => setMarkets(r.markets || [])).catch(() => {});
+    api.getTaxonomy()
+      .then(r => {
+        if (r.markets?.length) setMarkets(r.markets);
+        else setLoadError('No markets returned — is the engine deployed?');
+      })
+      .catch(e => setLoadError(`Cannot reach engine: ${e.message}. Deploy server.js to Windows VPS + pm2 restart all.`));
   }, []);
 
   async function buildBank(category) {
@@ -99,7 +105,8 @@ export default function TaxonomyPage() {
                 <span style={{ color: 'var(--text-faint)', fontSize: '11px' }}>{m.categoryCount}</span>
               </div>
             ))}
-            {markets.length === 0 && <div style={{ fontSize: '12px', color: 'var(--text-faint)', padding: '10px' }}>Loading markets...</div>}
+            {markets.length === 0 && !loadError && <div style={{ fontSize: '12px', color: 'var(--text-faint)', padding: '10px' }}>Loading markets...</div>}
+            {loadError && <div style={{ fontSize: '12px', color: '#f44336', padding: '10px', lineHeight: '1.5' }}>{loadError}</div>}
           </div>
 
           {/* Categories */}
