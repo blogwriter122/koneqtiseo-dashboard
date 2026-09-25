@@ -14,6 +14,7 @@ export default function NichesPage() {
   const [loading, setLoading] = useState(false);
   const [selVertical, setSelVertical] = useState('');
   const [minScore, setMinScore] = useState(50);
+  const [nicheTypeFilter, setNicheTypeFilter] = useState('');
   const [sortBy, setSortBy] = useState('rankability');
   const [selNiche, setSelNiche] = useState(null);
   const [plan, setPlan] = useState(null);
@@ -28,7 +29,9 @@ export default function NichesPage() {
   async function loadNiches(vertical = '') {
     setLoading(true);
     try {
-      const r = await api.browseNiches({ vertical, minScore, sortBy, limit: 200 });
+      const q = { vertical, minScore, sortBy, limit: 200 };
+      if (nicheTypeFilter) q.nicheType = nicheTypeFilter;
+      const r = await api.browseNiches(q);
       setNiches(r.niches || []);
     } catch (_) {} finally { setLoading(false); }
   }
@@ -112,6 +115,17 @@ export default function NichesPage() {
           {/* LIST */}
           <div style={s.panel}>
             <div style={s.filters}>
+              <span style={{ fontSize: '12px', color: 'var(--text-faint)' }}>Type:</span>
+              <select style={s.select} value={nicheTypeFilter} onChange={e => { setNicheTypeFilter(e.target.value); setTimeout(() => loadNiches(selVertical), 0); }}>
+                <option value="">All types</option>
+                <option value="affiliate">🛒 Affiliate</option>
+                <option value="info">📚 Info</option>
+                <option value="apk">📱 APK</option>
+                <option value="tool">🔧 Tool</option>
+                <option value="menu">🍔 Menu</option>
+                <option value="ecommerce">🏪 Ecommerce</option>
+                <option value="multi_page">📄 Multi-Page</option>
+              </select>
               <span style={{ fontSize: '12px', color: 'var(--text-faint)' }}>Min rankability:</span>
               <select style={s.select} value={minScore} onChange={e => { setMinScore(parseInt(e.target.value)); loadNiches(selVertical); }}>
                 <option value={0}>Any</option><option value={50}>50+</option><option value={60}>60+</option><option value={70}>70+ (strong)</option>
