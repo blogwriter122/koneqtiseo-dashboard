@@ -1,157 +1,227 @@
 /**
- * forge/studio/niche_store.js — Niche Catalog Store
- *
- * Mined niches accumulate here → browse 1000s (Amazon-style tree) →
- * click any → full plan (cached, instant).
- *
- * MASTER_PLAN §12 — browsable niche catalog
+ * pages/niches.js — Niche Catalog (Amazon-style browse)
+ * Browse 1000s of scored niches → click any → full plan (validation + cluster + silo)
  */
 
-'use strict';
+import { useState, useEffect } from 'react';
+import Layout from '../components/Layout';
+import { api } from '../lib/api';
 
-const db = require('../../shared/db');
+export default function NichesPage() {
+  const [tree, setTree] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [niches, setNiches] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selVertical, setSelVertical] = useState('');
+  const [minScore, setMinScore] = useState(50);
+  const [sortBy, setSortBy] = useState('rankability');
+  const [selNiche, setSelNiche] = useState(null);
+  const [plan, setPlan] = useState(null);
+  const [planLoading, setPlanLoading] = useState(false);
 
-/**
- * Save discovered niches (from vertical/market/competitor mining)
- */
-async function saveNiches(niches, meta = {}, userId = null, onLog = console.log) {
-  const { vertical, subcategory, nicheType, country, language } = meta;
-  let saved = 0;
+  useEffect(() => {
+    api.getNicheTree().then(r => setTree(r.tree || [])).catch(() => {});
+    api.getNicheStats().then(setStats).catch(() => {});
+    loadNiches();
+  }, []);
 
-  for (const n of niches) {
+  async function loadNiches(vertical = '') {
+    setLoading(true);
     try {
-      await db.supabase.from('niches').upsert({
-        user_id: userId,
-        vertical: vertical || null,
-        subcategory: subcategory || null,
-        niche_type: nicheType || 'info',
-        country: country || 'US',
-        language: language || 'english',
-        keyword: n.keyword,
-        volume: n.sourceVolume || n.volume || null,
-        difficulty: n.difficulty || null,
-        rankability: n.rankability || null,
-        serp_weakness: n.serpWeakness || null,
-        verdict: n.verdict || null,
-        best_country: n.bestCountry || null,
-        status: 'discovered',
-      }, { onConflict: 'user_id,keyword,country' });
-      saved++;
-    } catch (_) {}
-  }
-  onLog(`  💾 Saved ${saved} niches to catalog`);
-  return saved;
-}
-
-/**
- * Browse the niche catalog (tree + filters)
- */
-async function browseNiches(options = {}, userId = null) {
-  const { vertical, subcategory, nicheType, country, minScore, verdict, sortBy = 'rankability', limit = 100, offset = 0 } = options;
-
-  let q = db.supabase.from('niches').select('*');
-  if (userId) q = q.or(`user_id.eq.${userId},user_id.is.null`);
-  if (vertical) q = q.eq('vertical', vertical);
-  if (subcategory) q = q.eq('subcategory', subcategory);
-  if (nicheType) q = q.eq('niche_type', nicheType);
-  if (country) q = q.eq('country', country);
-  if (minScore) q = q.gte('rankability', minScore);
-  if (verdict) q = q.eq('verdict', verdict);
-
-  const orderCol = sortBy === 'volume' ? 'volume' : sortBy === 'score' ? 'total_score' : 'rankability';
-  q = q.order(orderCol, { ascending: false, nullsFirst: false }).range(offset, offset + limit - 1);
-
-  const { data } = await q;
-  return data || [];
-}
-
-/**
- * Get the catalog tree (verticals → subcategories → counts)
- */
-async function getCatalogTree(userId = null) {
-  let q = db.supabase.from('niches').select('vertical, subcategory, verdict');
-  if (userId) q = q.or(`user_id.eq.${userId},user_id.is.null`);
-  const { data } = await q;
-
-  const tree = {};
-  for (const n of (data || [])) {
-    const v = n.vertical || 'other';
-    if (!tree[v]) tree[v] = { vertical: v, count: 0, winnable: 0, subcategories: {} };
-    tree[v].count++;
-    if (['GOLDMINE', 'STRONG'].includes(n.verdict)) tree[v].winnable++;
-    const sub = n.subcategory || 'general';
-    if (!tree[v].subcategories[sub]) tree[v].subcategories[sub] = { name: sub, count: 0 };
-    tree[v].subcategories[sub].count++;
+      const r = await api.browseNiches({ vertical, minScore, sortBy, limit: 200 });
+      setNiches(r.niches || []);
+    } catch (_) {} finally { setLoading(false); }
   }
 
-  return Object.values(tree).map(v => ({
-    ...v,
-    subcategories: Object.values(v.subcategories),
-  }));
-}
-
-/**
- * Get one niche's full plan (validate + build cluster/silo if not cached)
- */
-async function getNichePlan(nicheId, page = null, onLog = console.log) {
-  const { data: niche } = await db.supabase.from('niches').select('*').eq('id', nicheId).single();
-  if (!niche) throw new Error('Niche not found');
-
-  // If plan already cached, return it
-  if (niche.blueprint && niche.cluster && niche.silo) {
-    return { niche, cached: true };
+  async function openPlan(niche) {
+    setSelNiche(niche);
+    setPlan(null);
+    setPlanLoading(true);
+    try {
+      const r = await api.getNichePlan(niche.id);
+      setPlan(r);
+    } catch (e) { alert(e.message); } finally { setPlanLoading(false); }
   }
 
-  // Otherwise generate the full plan now (validate + blueprint)
-  if (page) {
-    const { validateNiche } = require('./validator');
-    const validation = await validateNiche(page, {
-      keyword: niche.keyword, nicheType: niche.niche_type,
-      country: niche.country, language: niche.language,
-    }, onLog).catch(() => null);
-
-    let blueprint = null;
-    if (validation && ['GOLDMINE', 'STRONG', 'MODERATE'].includes(validation.verdict)) {
-      const { generateBlueprint } = require('./blueprint_generator');
-      blueprint = await generateBlueprint(page, validation, onLog).catch(() => null);
-    }
-
-    // Cache the plan
-    await db.supabase.from('niches').update({
-      total_score: validation?.totalScore,
-      verdict: validation?.verdict,
-      score_traffic: validation?.scores?.trafficProof,
-      score_competition: validation?.scores?.competition,
-      score_monetization: validation?.scores?.monetization,
-      score_sustainability: validation?.scores?.sustainability,
-      score_cluster: validation?.scores?.cluster,
-      cluster: blueprint?.section4_cluster || null,
-      silo: blueprint?.section6_structure || null,
-      blueprint: blueprint || null,
-      status: 'validated',
-      validated_at: new Date().toISOString(),
-    }).eq('id', nicheId).catch(() => {});
-
-    return { niche: { ...niche, validation, blueprint }, validation, blueprint, cached: false };
-  }
-
-  return { niche, cached: false };
-}
-
-/**
- * Catalog stats
- */
-async function catalogStats(userId = null) {
-  let q = db.supabase.from('niches').select('verdict, niche_type');
-  if (userId) q = q.or(`user_id.eq.${userId},user_id.is.null`);
-  const { data } = await q;
-  const niches = data || [];
-  return {
-    total: niches.length,
-    goldmine: niches.filter(n => n.verdict === 'GOLDMINE').length,
-    strong: niches.filter(n => n.verdict === 'STRONG').length,
-    winnable: niches.filter(n => ['GOLDMINE', 'STRONG'].includes(n.verdict)).length,
+  const s = {
+    page: { padding: '24px' },
+    layout: { display: 'grid', gridTemplateColumns: '240px 1fr', gap: '16px' },
+    tree: { background: 'var(--panel)', borderRadius: '12px', padding: '16px', maxHeight: '70vh', overflowY: 'auto' },
+    treeItem: (a) => ({ padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', background: a ? 'var(--forge)' : 'transparent', color: a ? 'white' : 'var(--text)', display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }),
+    panel: { background: 'var(--panel)', borderRadius: '12px', padding: '20px' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px,1fr))', gap: '10px', marginBottom: '16px' },
+    stat: { background: 'var(--bg)', borderRadius: '10px', padding: '14px', textAlign: 'center', border: '1px solid var(--border)' },
+    filters: { display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' },
+    select: { padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: '13px' },
+    table: { width: '100%', borderCollapse: 'collapse', fontSize: '13px' },
+    th: { background: 'var(--bg)', padding: '8px 12px', textAlign: 'left', fontWeight: '700', borderBottom: '2px solid var(--border)', fontSize: '11px', color: 'var(--text-faint)', textTransform: 'uppercase' },
+    td: { padding: '9px 12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' },
+    badge: (v) => ({ background: v === 'GOLDMINE' ? '#ffd700' : v === 'STRONG' ? '#00c853' : v === 'MODERATE' ? '#ff9100' : '#f44336', color: v === 'GOLDMINE' ? '#000' : '#fff', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '700' }),
+    modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' },
+    modalCard: { background: 'var(--panel)', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '700px', maxHeight: '88vh', overflowY: 'auto' },
+    scoreBar: { display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '8px', marginBottom: '16px' },
+    scoreCell: { background: 'var(--bg)', borderRadius: '8px', padding: '10px', textAlign: 'center', border: '1px solid var(--border)' },
+    btn: (c = 'var(--forge)') => ({ background: c, color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' }),
+    chip: { display: 'inline-block', background: 'var(--bg)', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', margin: '2px', border: '1px solid var(--border)' },
   };
-}
 
-module.exports = { saveNiches, browseNiches, getCatalogTree, getNichePlan, catalogStats };
+  return (
+    <Layout>
+      <div style={s.page}>
+        <div className="page-head">
+          <div>
+            <div className="page-title">📚 Niche Catalog</div>
+            <div className="page-sub">Browse discovered niches · click any → full plan (validation + cluster + silo)</div>
+          </div>
+        </div>
+
+        {stats && (
+          <div style={s.grid}>
+            {[
+              { label: 'Total Niches', value: stats.total, color: 'var(--forge)' },
+              { label: '🏆 Goldmine', value: stats.goldmine, color: '#ffd700' },
+              { label: '✅ Strong', value: stats.strong, color: '#00c853' },
+              { label: 'Winnable', value: stats.winnable, color: '#00c853' },
+            ].map(m => (
+              <div key={m.label} style={s.stat}>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: m.color }}>{m.value}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-faint)' }}>{m.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={s.layout}>
+          {/* TREE */}
+          <div style={s.tree}>
+            <div style={{ fontWeight: '700', fontSize: '12px', color: 'var(--text-faint)', marginBottom: '10px', textTransform: 'uppercase' }}>Verticals</div>
+            <div style={s.treeItem(selVertical === '')} onClick={() => { setSelVertical(''); loadNiches(''); }}>
+              <span>All</span><span style={{ color: 'var(--text-faint)' }}>{stats?.total || 0}</span>
+            </div>
+            {tree.map(v => (
+              <div key={v.vertical}>
+                <div style={s.treeItem(selVertical === v.vertical)} onClick={() => { setSelVertical(v.vertical); loadNiches(v.vertical); }}>
+                  <span>{v.vertical}</span>
+                  <span style={{ color: v.winnable > 0 ? '#00c853' : 'var(--text-faint)' }}>{v.winnable}/{v.count}</span>
+                </div>
+              </div>
+            ))}
+            {tree.length === 0 && <div style={{ fontSize: '12px', color: 'var(--text-faint)', padding: '10px' }}>No niches yet. Mine a vertical in Studio.</div>}
+          </div>
+
+          {/* LIST */}
+          <div style={s.panel}>
+            <div style={s.filters}>
+              <span style={{ fontSize: '12px', color: 'var(--text-faint)' }}>Min rankability:</span>
+              <select style={s.select} value={minScore} onChange={e => { setMinScore(parseInt(e.target.value)); loadNiches(selVertical); }}>
+                <option value={0}>Any</option><option value={50}>50+</option><option value={60}>60+</option><option value={70}>70+ (strong)</option>
+              </select>
+              <span style={{ fontSize: '12px', color: 'var(--text-faint)' }}>Sort:</span>
+              <select style={s.select} value={sortBy} onChange={e => { setSortBy(e.target.value); loadNiches(selVertical); }}>
+                <option value="rankability">Rankability</option><option value="volume">Volume</option><option value="score">Total Score</option>
+              </select>
+            </div>
+
+            {loading ? <div className="empty">Loading...</div> : niches.length === 0 ? (
+              <div className="empty">No niches. Mine a vertical in Studio to fill the catalog.</div>
+            ) : (
+              <table style={s.table}>
+                <thead><tr><th style={s.th}>Keyword</th><th style={s.th}>Vertical</th><th style={s.th}>Type</th><th style={s.th}>Vol</th><th style={s.th}>Rank</th><th style={s.th}>Verdict</th></tr></thead>
+                <tbody>
+                  {niches.map(n => (
+                    <tr key={n.id} onClick={() => openPlan(n)} style={{ cursor: 'pointer' }}>
+                      <td style={{ ...s.td, fontWeight: '600' }}>{n.keyword}</td>
+                      <td style={s.td}>{n.vertical || '—'}</td>
+                      <td style={s.td}>{n.niche_type}</td>
+                      <td style={s.td}>{n.volume?.toLocaleString() ?? '—'}</td>
+                      <td style={{ ...s.td, fontWeight: '700', color: n.rankability >= 60 ? '#00c853' : 'var(--text)' }}>{n.rankability ?? '—'}</td>
+                      <td style={s.td}>{n.verdict ? <span style={s.badge(n.verdict)}>{n.verdict}</span> : <span style={{ fontSize: '11px', color: 'var(--text-faint)' }}>click to validate</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* FULL PLAN MODAL */}
+      {selNiche && (
+        <div style={s.modal} onClick={() => { setSelNiche(null); setPlan(null); }}>
+          <div style={s.modalCard} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: '20px', fontWeight: '800', marginBottom: '4px' }}>{selNiche.keyword}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-faint)', marginBottom: '20px' }}>
+              {selNiche.vertical} · {selNiche.niche_type} · {selNiche.country}
+            </div>
+
+            {planLoading ? (
+              <div className="empty">Validating + building full plan...</div>
+            ) : plan ? (
+              <>
+                {/* Validation scores (the 5 metrics) */}
+                {plan.validation && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div style={{ fontWeight: '700' }}>Validation Score</div>
+                      <div><span style={s.badge(plan.validation.verdict)}>{plan.validation.verdict}</span> <strong>{plan.validation.totalScore}/100</strong></div>
+                    </div>
+                    <div style={s.scoreBar}>
+                      {[
+                        ['Traffic', plan.validation.scores?.trafficProof, 20],
+                        ['Competition', plan.validation.scores?.competition, 25],
+                        ['Monetization', plan.validation.scores?.monetization, 20],
+                        ['Sustain', plan.validation.scores?.sustainability, 15],
+                        ['Cluster', plan.validation.scores?.cluster, 20],
+                      ].map(([label, val, max]) => (
+                        <div key={label} style={s.scoreCell}>
+                          <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--forge)' }}>{val ?? '—'}</div>
+                          <div style={{ fontSize: '9px', color: 'var(--text-faint)' }}>{label} /{max}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Keyword cluster (sub-keywords) */}
+                {plan.blueprint?.section4_cluster && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontWeight: '700', marginBottom: '8px' }}>🔑 Keyword Cluster (sub-keywords)</div>
+                    {Object.entries(plan.blueprint.section4_cluster).map(([group, kws]) => Array.isArray(kws) && kws.length > 0 && (
+                      <div key={group} style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: '4px' }}>{group}</div>
+                        {kws.slice(0, 15).map((k, i) => <span key={i} style={s.chip}>{typeof k === 'string' ? k : k.keyword}</span>)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Silo structure */}
+                {plan.blueprint?.section6_structure && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontWeight: '700', marginBottom: '8px' }}>🏛️ Silo Structure</div>
+                    <pre style={{ background: 'var(--bg)', padding: '12px', borderRadius: '8px', fontSize: '12px', overflow: 'auto', maxHeight: '200px' }}>
+                      {JSON.stringify(plan.blueprint.section6_structure, null, 2).slice(0, 1000)}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Content plan */}
+                {plan.blueprint?.section5_contentPlan && (
+                  <div style={{ marginBottom: '16px', fontSize: '13px' }}>
+                    <strong>Content plan:</strong> {plan.blueprint.section5_contentPlan.totalArticles} articles, {plan.blueprint.section5_contentPlan.estimatedWeeks} weeks
+                  </div>
+                )}
+
+                <button style={{ ...s.btn('#00c853'), width: '100%' }} onClick={() => window.location.href = '/studio'}>
+                  🚀 Build This Niche (go to Studio)
+                </button>
+              </>
+            ) : (
+              <div className="empty">Click to load plan</div>
+            )}
+          </div>
+        </div>
+      )}
+    </Layout>
+  );
+}
