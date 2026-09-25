@@ -15,6 +15,7 @@ const NAV = [
   { section: 'STUDIO', color: 'studio', items: [
     { href: '/studio', icon: '🎯', label: 'Niche Studio', engine: 'studio' },
     { href: '/niches', icon: '📚', label: 'Niche Catalog', engine: 'studio' },
+    { href: '/taxonomy', icon: '🛒', label: 'Amazon Taxonomy', engine: 'studio' },
     { href: '/local', icon: '📍', label: 'Local Studio', engine: 'studio' },
     { href: '/campaign', icon: '🚀', label: 'Campaigns', engine: 'studio' },
     { href: '/audit', icon: '🕷️', label: 'Site Audit', engine: 'studio' },
